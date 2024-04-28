@@ -9,6 +9,7 @@ import pykms_Aes as aes
 from pykms_Base import kmsBase
 from pykms_Structure import Structure
 from pykms_Format import justify, byterize, enco, deco, pretty_printer
+from pykms_Sql import sql_clientMachineExists
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -73,10 +74,21 @@ class kmsRequestV5(kmsBase):
                 decrypted = self.decryptRequest(requestData)
 
                 responseBuffer = self.serverLogic(decrypted['request'])
-        
-                iv, encrypted = self.encryptResponse(requestData, decrypted, responseBuffer)
 
-                responseData = self.generateResponse(iv, encrypted, requestData)
+                returnError=None
+                clientMachineId=responseBuffer["clientMachineId"].get()
+                loggersrv.debug("Check in DB - clientMachineId: %s" % clientMachineId)
+                if self.srv_config['sqlite']:
+                        if sql_clientMachineExists(self.srv_config['sqlite'], clientMachineId):
+                                loggersrv.info(f"Host {self.srv_config['raddr'][0]} - clientMachineId '{clientMachineId}' is already present. Continue")
+                        else:
+                                loggersrv.error(f"Host {self.srv_config['raddr'][0]} - clientMachineId '{clientMachineId}' is NOT present.")
+                                returnError="SL_E_SRV_AUTHORIZATION_FAILED"
+                if not returnError is None:
+                        responseData = self.executeRequestLogicError(returnError)
+                else:
+                        iv, encrypted = self.encryptResponse(requestData, decrypted, responseBuffer)
+                        responseData = self.generateResponse(iv, encrypted, requestData)
 
                 return responseData
         

@@ -119,3 +119,27 @@ clientMachineId=? AND applicationId=?;", (str(response["kmsEpid"].decode('utf-16
                 if con:
                         con.commit()
                         con.close()
+
+def sql_clientMachineExists(dbName, clientMachineId):
+        data = None
+        machineName = None
+        try:
+                con = sqlite3.connect(dbName)
+                cur = con.cursor()
+                loggersrv.debug(f"Check if clientMachineId '{clientMachineId}' exists in DB")
+                try:
+                        infoDict = {
+                          "clientMachineId" : str(clientMachineId)
+                        }
+                        cur.execute("SELECT clientMachineId, machineName FROM clients WHERE clientMachineId=:clientMachineId;", infoDict)
+                        data = cur.fetchone()
+                except sqlite3.Error as e:
+                        pretty_printer(log_obj = loggersrv.error, to_exit = True,
+                                       put_text = "{reverse}{red}{bold}Sqlite Error: %s. Exiting...{end}" %str(e)) 
+                if not data is None:
+                        (clientMachineId, machineName) = data
+                        loggersrv.info(f"clientMachineId '{clientMachineId}' - {machineName} exists in DB!")
+        finally:
+                if con:
+                        con.close()
+        return not (data is None)

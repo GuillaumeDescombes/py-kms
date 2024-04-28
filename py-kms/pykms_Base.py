@@ -4,6 +4,7 @@ import binascii
 import logging
 import time
 import uuid
+import struct
 
 from pykms_Structure import Structure
 from pykms_DB2Dict import kmsDB2Dict
@@ -11,6 +12,7 @@ from pykms_PidGenerator import epidGenerator
 from pykms_Filetimes import filetime_to_dt
 from pykms_Sql import sql_update, sql_update_epid
 from pykms_Format import justify, byterize, enco, deco, pretty_printer
+from pykms_Misc import ErrorCodes
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -242,6 +244,19 @@ could be detected as not genuine !{end}" %currentClientCount)
                 loggersrv.info("Server ePID: %s" % response["kmsEpid"].decode('utf-16le'))
                         
                 return response
+
+        def executeRequestLogicError(self, errorId):
+                try:
+                    finalResponse = bytearray()
+                    finalResponse.extend(bytearray(struct.pack('<I', 0)))
+                    finalResponse.extend(bytearray(struct.pack('<I', 0)))
+                    finalResponse.extend(bytearray(struct.pack('<I', ErrorCodes[errorId][0])))
+                    finalResponse=bytes(finalResponse)
+#                    finalResponse=finalResponse.decode('utf-8').encode('utf-8')
+                except Exception as e:
+                    pretty_printer(log_obj = loggersrv.error, to_exit = True,
+                                   put_text = "{reverse}{red}{bold}Error: %s. Exiting...{end}" %str(e))
+                return finalResponse
 
 
 import pykms_RequestV4, pykms_RequestV5, pykms_RequestV6, pykms_RequestUnknown
