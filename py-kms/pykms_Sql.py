@@ -138,7 +138,7 @@ def sql_clientMachineExists(dbName, clientMachineId):
                                        put_text = "{reverse}{red}{bold}Sqlite Error: %s. Exiting...{end}" %str(e)) 
                 if not data is None:
                         (clientMachineId, machineName) = data
-                        loggersrv.info(f"clientMachineId '{clientMachineId}' - {machineName} exists in DB!")
+                        loggersrv.debug(f"clientMachineId '{clientMachineId}' - {machineName} exists in DB!")
         finally:
                 if con:
                         con.close()

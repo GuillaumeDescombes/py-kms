@@ -73,20 +73,21 @@ class kmsRequestV5(kmsBase):
         
                 decrypted = self.decryptRequest(requestData)
 
-                responseBuffer = self.serverLogic(decrypted['request'])
-
                 returnError=None
-                clientMachineId=responseBuffer["clientMachineId"].get()
+                kmsRequest = byterize(decrypted['request'])
+                clientMachineId=kmsRequest["clientMachineId"].get()
                 loggersrv.debug("Check in DB - clientMachineId: %s" % clientMachineId)
                 if self.srv_config['sqlite']:
                         if sql_clientMachineExists(self.srv_config['sqlite'], clientMachineId):
-                                loggersrv.info(f"Host {self.srv_config['raddr'][0]} - clientMachineId '{clientMachineId}' is already present. Continue")
+                                loggersrv.info(f"Host {self.srv_config['raddr'][0]} - clientMachineId '{clientMachineId}' is already defined in DB")
                         else:
-                                loggersrv.error(f"Host {self.srv_config['raddr'][0]} - clientMachineId '{clientMachineId}' is NOT present.")
+                                loggersrv.error(f"Host {self.srv_config['raddr'][0]} - clientMachineId '{clientMachineId}' is NOT defined in DB")
                                 returnError="SL_E_SRV_AUTHORIZATION_FAILED"
+
                 if not returnError is None:
                         responseData = self.executeRequestLogicError(returnError)
                 else:
+                        responseBuffer = self.serverLogic(decrypted['request'])
                         iv, encrypted = self.encryptResponse(requestData, decrypted, responseBuffer)
                         responseData = self.generateResponse(iv, encrypted, requestData)
 
@@ -154,8 +155,8 @@ class kmsRequestV5(kmsBase):
 
                 pretty_printer(num_text = 16, where = "srv")
                 response = byterize(response) 
-                loggersrv.info("KMS V%d Response: \n%s\n" % (self.ver, justify(response.dump(print_to_stdout = False))))
-                loggersrv.info("KMS V%d Structure Bytes: \n%s\n" % (self.ver, justify(deco(binascii.b2a_hex(enco(str(response), 'latin-1')), 'utf-8'))))
+                loggersrv.debug("KMS V%d Response: \n%s\n" % (self.ver, justify(response.dump(print_to_stdout = False))))
+                loggersrv.debug("KMS V%d Structure Bytes: \n%s\n" % (self.ver, justify(deco(binascii.b2a_hex(enco(str(response), 'latin-1')), 'utf-8'))))
                                                         
                 return str(response)
         
@@ -186,7 +187,7 @@ class kmsRequestV5(kmsBase):
 
                 pretty_printer(num_text = 10, where = "clt")
                 request = byterize(request)
-                loggersrv.info("Request V%d Data: \n%s\n" % (self.ver, justify(request.dump(print_to_stdout = False))))
-                loggersrv.info("Request V%d: \n%s\n" % (self.ver, justify(deco(binascii.b2a_hex(enco(str(request), 'latin-1')), 'utf-8'))))
+                loggersrv.debug("Request V%d Data: \n%s\n" % (self.ver, justify(request.dump(print_to_stdout = False))))
+                loggersrv.debug("Request V%d: \n%s\n" % (self.ver, justify(deco(binascii.b2a_hex(enco(str(request), 'latin-1')), 'utf-8'))))
                 
                 return request

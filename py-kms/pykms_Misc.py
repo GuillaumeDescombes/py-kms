@@ -52,7 +52,7 @@ def add_logging_level(levelName, levelNum, methodName = None):
         setattr(logging, methodName, logToRoot)
 
 class LevelFormatter(logging.Formatter):
-        dfmt = '%a, %d %b %Y %H:%M:%S'
+        dfmt = '%Y-%m-%d %H:%M:%S'
         default_fmt = logging.Formatter('%(message)s', datefmt = dfmt)
 
         def __init__(self, formats, color = False):

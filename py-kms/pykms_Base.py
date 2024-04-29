@@ -210,7 +210,8 @@ could be detected as not genuine !{end}" %currentClientCount)
                 loggersrv.info("Request Time: %s" % local_dt.strftime('%Y-%m-%d %H:%M:%S %Z (UTC%z)'))
                 
                 if self.srv_config['loglevel'] == 'MININFO':
-                        loggersrv.mininfo("", extra = {'host': str(self.srv_config['raddr']),
+                        loggersrv.mininfo("Activation of '%s' - %s" % (infoDict["machineName"], infoDict["clientMachineId"]),
+                                          extra = {'host': str(self.srv_config['raddr'][0]),
                                                        'status' : infoDict["licenseStatus"],
                                                        'product' : infoDict["skuId"]})
                 # Create database.
