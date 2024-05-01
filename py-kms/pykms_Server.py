@@ -196,8 +196,8 @@ Type \"RANDOM\" to auto-generate the HWID.',
                         'def' : "RANDOM", 'des' : "hwid"},
         'time0'      : {'help' : 'Maximum inactivity time (in seconds) after which the connection with the client is closed. If \"None\" (default) serve forever.',
                         'def' : None, 'des' : "timeoutidle"},
-        'time1'      : {'help' : 'Set the maximum time to wait for sending / receiving a request / response. Default is no timeout.',
-                        'def' : None, 'des' : "timeoutsndrcv"},
+        'time1'      : {'help' : 'Set the maximum time to wait for sending / receiving a request / response. Default is 10 seconds.',
+                        'def' : 10, 'des' : "timeoutsndrcv"},
         'asyncmsg'   : {'help' : 'Prints pretty / logging messages asynchronously. Deactivated by default.',
                         'def' : False, 'des' : "asyncmsg"},
         'llevel'     : {'help' : 'Use this option to set a log level. The default is \"WARNING\".', 'def' : "WARNING", 'des' : "loglevel",
@@ -475,21 +475,40 @@ class kmsServerHandler(socketserver.BaseRequestHandler):
                 srv_config['raddr'] = self.client_address
 
         def handle(self):
+                if not srv_config['timeoutsndrcv'] is None:
+                        loggersrv.debug(f"Timeout set: {srv_config['timeoutsndrcv']} seconds")
                 self.request.settimeout(srv_config['timeoutsndrcv'])
+                host = self.client_address[0]
                 while True:
                         # self.request is the TCP socket connected to the client
                         try:
                                 self.data = self.request.recv(1024)
                                 if self.data == '' or not self.data:
+                                        loggersrv.error(f"Host {host} - No data received")
                                         pretty_printer(log_obj = loggersrv.debug, # use debug, as the healthcheck will spam this
                                                        put_text = "{reverse}{yellow}{bold}No data received.{end}")
                                         break
+                        except socket.timeout as e:
+                                loggersrv.error(f"Host {host} - Time out error")
+                                pretty_printer(log_obj = loggersrv.info,
+                                               put_text = "{reverse}{red}{bold}Time out while receiving{end}")
+                                break
                         except socket.error as e:
-                                pretty_printer(log_obj = loggersrv.error,
+                                loggersrv.error(f"Host {host} - Socket error '{e}'")
+                                pretty_printer(log_obj = loggersrv.info,
                                                put_text = "{reverse}{red}{bold}While receiving: %s{end}" %str(e))
                                 break
-                        
-                        packetType = MSRPCHeader(self.data)['type']
+                        #do not decode if size is too small
+                        if len(self.data)<16:
+                                loggersrv.error(f"Host {host} - RPC message is too small")
+                                break
+                        else:
+                                loggersrv.debug(f"Received a {len(self.data)}-byte packet") 
+                        try:
+                                packetType = MSRPCHeader(self.data)['type']
+                        except Exception as e:
+                                loggersrv.error(f"Host {host} - Cannot decode RPC message '{e}'")
+                                break
                         if packetType == rpcBase.packetType['bindReq']:
                                 loggersrv.info("RPC bind request received.")
                                 pretty_printer(num_text = [-2, 2], where = "srv")
@@ -499,11 +518,16 @@ class kmsServerHandler(socketserver.BaseRequestHandler):
                                 pretty_printer(num_text = [-2, 13], where = "srv")
                                 handler = pykms_RpcRequest.handler(self.data, srv_config)
                         else:
-                                pretty_printer(log_obj = loggersrv.error,
+                                loggersrv.error(f"Host {host} - Invalid RPC request type")
+                                pretty_printer(log_obj = loggersrv.info,
                                                put_text = "{reverse}{red}{bold}Invalid RPC request type %s.{end}" %packetType)
                                 break
 
-                        res = enco(str(handler.populate()), 'latin-1')
+                        try:
+                                res = enco(str(handler.populate()), 'latin-1')
+                        except Exception as e:
+                                loggersrv.error(f"Host {host} - Cannot create RPC response message '{e}'")
+                                break
 
                         if packetType == rpcBase.packetType['bindReq']:
                                 loggersrv.info("RPC bind acknowledged.")
@@ -517,7 +541,8 @@ class kmsServerHandler(socketserver.BaseRequestHandler):
                                 if packetType == rpcBase.packetType['request']:
                                         break
                         except socket.error as e:
-                                pretty_printer(log_obj = loggersrv.error,
+                                loggersrv.error(f"Host {host} - Cannot send RPC response message '{e}'")
+                                pretty_printer(log_obj = loggersrv.info,
                                                put_text = "{reverse}{red}{bold}While sending: %s{end}" %str(e))
                                 break
 
