@@ -199,7 +199,8 @@ could be detected as not genuine !{end}" %currentClientCount)
                         "skuId" : skuName,
                         "licenseStatus" : kmsRequest.getLicenseStatus(),
                         "requestTime" : int(time.time()),
-                        "kmsEpid" : None
+                        "kmsEpid" : None,
+                        "host" : self.srv_config['raddr'][0]
                 }
 
                 loggersrv.info("Machine Name: %s" % infoDict["machineName"])

@@ -24,7 +24,7 @@ def sql_initialize(dbName):
                 try:
                         con = sqlite3.connect(dbName)
                         cur = con.cursor()
-                        cur.execute("CREATE TABLE clients(clientMachineId TEXT , machineName TEXT, applicationId TEXT, skuId TEXT, licenseStatus TEXT, lastRequestTime INTEGER, kmsEpid TEXT, requestCount INTEGER, PRIMARY KEY(clientMachineId, applicationId))")
+                        cur.execute("CREATE TABLE clients(clientMachineId TEXT , machineName TEXT, applicationId TEXT, skuId TEXT, licenseStatus TEXT, lastRequestTime INTEGER, kmsEpid TEXT, requestCount INTEGER, lastHost TEXT, PRIMARY KEY(clientMachineId, applicationId))")
 
                 except sqlite3.Error as e:
                         pretty_printer(log_obj = loggersrv.error, to_exit = True, put_text = "{reverse}{red}{bold}Sqlite Error: %s. Exiting...{end}" %str(e))
@@ -41,6 +41,9 @@ def sql_get_all(dbName):
                 cur.execute("SELECT * FROM clients")
                 clients = []
                 for row in cur.fetchall():
+                        if len(row)==8:
+                                loggersrv.warning("Please amend the DB schema - lastHost field is missing")
+                                row[8] = None
                         clients.append({
                                 'clientMachineId': row[0],
                                 'machineName': row[1],
@@ -49,7 +52,8 @@ def sql_get_all(dbName):
                                 'licenseStatus': row[4],
                                 'lastRequestTime': datetime.datetime.fromtimestamp(row[5]).isoformat(),
                                 'kmsEpid': row[6],
-                                'requestCount': row[7]
+                                'requestCount': row[7],
+                                'lastHost': row[8]
                         })
                 return clients
 
@@ -84,6 +88,9 @@ clientMachineId=:clientMachineId AND applicationId=:appId;", infoDict)
 clientMachineId=:clientMachineId AND applicationId=:appId;", infoDict)
                                 # Increment requestCount
                                 cur.execute("UPDATE clients SET requestCount=requestCount+1 WHERE \
+clientMachineId=:clientMachineId AND applicationId=:appId;", infoDict)
+                                if data[8] != infoDict["host"]:
+                                        cur.execute("UPDATE clients SET lastHost=:host WHERE \
 clientMachineId=:clientMachineId AND applicationId=:appId;", infoDict)
 
                 except sqlite3.Error as e:
