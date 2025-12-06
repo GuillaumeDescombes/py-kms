@@ -209,6 +209,7 @@ could be detected as not genuine !{end}" %currentClientCount)
                 loggersrv.info("SKU ID: %s" % infoDict["skuId"])
                 loggersrv.info("License Status: %s" % infoDict["licenseStatus"])
                 loggersrv.info("Request Time: %s" % local_dt.strftime('%Y-%m-%d %H:%M:%S %Z (UTC%z)'))
+                loggersrv.info("Host: %s" % infoDict["host"])
                 
                 if self.srv_config['loglevel'] == 'MININFO':
                         loggersrv.mininfo("Activation of '%s' - %s" % (infoDict["machineName"], infoDict["clientMachineId"]),
@@ -219,9 +220,9 @@ could be detected as not genuine !{end}" %currentClientCount)
                 if self.srv_config['sqlite']:
                         sql_update(self.srv_config['sqlite'], infoDict)
 
-                return self.createKmsResponse(kmsRequest, currentClientCount, appName)
+                return self.createKmsResponse(kmsRequest, currentClientCount, skuName)
 
-        def createKmsResponse(self, kmsRequest, currentClientCount, appName):
+        def createKmsResponse(self, kmsRequest, currentClientCount, skuName):
                 response = self.kmsResponseStruct()
                 response['versionMinor'] = kmsRequest['versionMinor']
                 response['versionMajor'] = kmsRequest['versionMajor']
@@ -241,7 +242,7 @@ could be detected as not genuine !{end}" %currentClientCount)
 
                 # Update database epid.
                 if self.srv_config['sqlite']:
-                        sql_update_epid(self.srv_config['sqlite'], kmsRequest, response, appName)
+                        sql_update_epid(self.srv_config['sqlite'], kmsRequest, response, skuName)
 
                 loggersrv.info("Server ePID: %s" % response["kmsEpid"].decode('utf-16le'))
                         
